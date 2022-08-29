@@ -1,0 +1,158 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis01
+  labels:
+    tier: hacach
+spec:
+  storageClassName: local
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/redis01"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis02
+  labels:
+    tier: hacach
+spec:
+  storageClassName: local
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/redis02"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis03
+  labels:
+    tier: hacach
+spec:
+  storageClassName: local
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/redis03"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis04
+  labels:
+    tier: hacach
+spec:
+  storageClassName: local
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/redis04"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis05
+  labels:
+    tier: hacach
+spec:
+  storageClassName: local
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/redis05"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis06
+  labels:
+    tier: hacach
+spec:
+  storageClassName: local
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/redis06"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cluster-service
+  labels:
+    app: redis-cluster-svc
+spec:
+  ports:
+  - port: 6379
+    name: client
+    targetPort: 6379
+  - port: 16379
+    name: gossip
+    targetPort: 16379
+  clusterIP: None
+  selector:
+    app: redis-cluster
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cluster
+spec:
+  selector:
+    matchLabels:
+      app: redis-cluster 
+  serviceName: "redis-cluster-service"
+  replicas: 6
+  template:
+    metadata:
+      labels:
+        app: redis-cluster 
+    spec:
+      volumes:
+      - name: conf
+        configMap:
+          name: redis-cluster-configmap
+          defaultMode: 0755
+      containers:
+      - name: redis
+        image: redis:5.0.1-alpine
+        env: 
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - containerPort: 6379
+          name: client
+        - containerPort: 16379
+          name: gossip
+        command: ["/conf/update-node.sh", "redis-server", "/conf/redis.conf"]
+        volumeMounts:
+        - name: data
+          mountPath: /data
+          readOnly: false
+        - name: conf
+          mountPath: /conf
+          readOnly: false
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "local"
+      resources:
+        requests:
+          storage: 1Gi
